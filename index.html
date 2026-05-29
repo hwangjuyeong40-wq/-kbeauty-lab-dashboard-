@@ -1,4 +1,11 @@
-<!DOCTYPE html>
+import json
+
+# 1. 기존 데이터 로드
+with open('data.json', 'r', encoding='utf-8') as f:
+    json_data = f.read()
+
+# 2. 통합형 전체 HTML 템플릿 정의
+html_template = f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -21,19 +28,19 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
                 <p class="text-xs font-medium text-gray-400 uppercase">총 리뷰 수</p>
-                <h3 id="kpi-total" class="text-2xl font-bold text-gray-900 mt-1">로딩 중...</h3>
+                <h3 id="kpi-total" class="text-2xl font-bold text-gray-900 mt-1">계산 중...</h3>
             </div>
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
                 <p class="text-xs font-medium text-blue-500 uppercase">긍정 리뷰 수</p>
-                <h3 id="kpi-pos" class="text-2xl font-bold text-blue-600 mt-1">로딩 중...</h3>
+                <h3 id="kpi-pos" class="text-2xl font-bold text-blue-600 mt-1">계산 중...</h3>
             </div>
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
                 <p class="text-xs font-medium text-green-500 uppercase">중립 리뷰 수</p>
-                <h3 id="kpi-neu" class="text-2xl font-bold text-green-600 mt-1">로딩 중...</h3>
+                <h3 id="kpi-neu" class="text-2xl font-bold text-green-600 mt-1">계산 중...</h3>
             </div>
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
                 <p class="text-xs font-medium text-red-500 uppercase">부정 리뷰 수</p>
-                <h3 id="kpi-neg" class="text-2xl font-bold text-red-600 mt-1">로딩 중...</h3>
+                <h3 id="kpi-neg" class="text-2xl font-bold text-red-600 mt-1">계산 중...</h3>
             </div>
         </div>
 
@@ -142,24 +149,15 @@
     </main>
 
     <script>
-        let globalDataset = [];
+        const globalDataset = {json_data};
 
-        async_load_data();
+        if (globalDataset.length > 0) {{
+            initDashboard(globalDataset);
+        }} else {{
+            alert("globalDataset 변수 안에 데이터가 주입되지 않았습니다.");
+        }}
 
-        async function async_load_data() {
-            try {
-                // 현재 도메인 구조에 맞춰 강제 매핑된 절대 경로 지정 방식
-                const response = await fetch('https://hwangjuyeong40-wq.github.io/kbeauty-lab-dashboard/data.json');
-                if (!response.ok) throw new Error("네트워크 응답 실패");
-                globalDataset = await response.json();
-                initDashboard(globalDataset);
-            } catch (error) {
-                console.error("데이터 셋 로드 실패:", error);
-                alert("data.json 파일을 불러오지 못했습니다. 경로를 확인해 주세요.");
-            }
-        }
-
-        function initDashboard(dataset) {
+        function initDashboard(dataset) {{
             const total = dataset.length;
             const pos = dataset.filter(d => d.sentiment === "긍정").length;
             const neu = dataset.filter(d => d.sentiment === "중립").length;
@@ -170,83 +168,83 @@
             document.getElementById("kpi-neu").innerText = neu.toLocaleString() + "건";
             document.getElementById("kpi-neg").innerText = neg.toLocaleString() + "건";
 
-            new Chart(document.getElementById('sentimentPieChart'), {
+            new Chart(document.getElementById('sentimentPieChart'), {{
                 type: 'doughnut',
-                data: { labels: ['긍정', '중립', '부정'], datasets: [{ data: [pos, neu, neg], backgroundColor: ['#2563eb', '#16a34a', '#dc2626'] }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
+                data: {{ labels: ['긍정', '중립', '부정'], datasets: [{{ data: [pos, neu, neg], backgroundColor: ['#2563eb', '#16a34a', '#dc2626'] }}] }},
+                options: {{ responsive: true, maintainAspectRatio: false }}
+            }});
 
             const ratings = [1,2,3,4,5].map(r => dataset.filter(d => d.rating === r).length);
-            new Chart(document.getElementById('ratingBarChart'), {
+            new Chart(document.getElementById('ratingBarChart'), {{
                 type: 'bar',
-                data: { labels: ['1점', '2점', '3점', '4점', '5점'], datasets: [{ label: '건수', data: ratings, backgroundColor: '#7c3aed' }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
+                data: {{ labels: ['1점', '2점', '3점', '4점', '5점'], datasets: [{{ label: '건수', data: ratings, backgroundColor: '#7c3aed' }}] }},
+                options: {{ responsive: true, maintainAspectRatio: false }}
+            }});
 
-            const prodMap = {};
-            dataset.forEach(d => { prodMap[d.product] = (prodMap[d.product] || 0) + 1; });
+            const prodMap = {{}};
+            dataset.forEach(d => {{ prodMap[d.product] = (prodMap[d.product] || 0) + 1; }});
             const sortedProd = Object.entries(prodMap).sort((a,b) => b[1] - a[1]).slice(0, 10);
-            new Chart(document.getElementById('productHBarChart'), {
+            new Chart(document.getElementById('productHBarChart'), {{
                 type: 'bar',
-                data: { labels: sortedProd.map(x => x[0]), datasets: [{ label: '건수', data: sortedProd.map(x => x[1]), backgroundColor: '#0ea5e9' }] },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
-            });
+                data: {{ labels: sortedProd.map(x => x[0]), datasets: [{{ label: '건수', data: sortedProd.map(x => x[1]), backgroundColor: '#0ea5e9' }}] }},
+                options: {{ indexAxis: 'y', responsive: true, maintainAspectRatio: false }}
+            }});
 
-            const platMap = {};
-            dataset.forEach(d => { platMap[d.platform_label] = (platMap[d.platform_label] || 0) + 1; });
-            new Chart(document.getElementById('platformBarChart'), {
+            const platMap = {{}};
+            dataset.forEach(d => {{ platMap[d.platform_label] = (platMap[d.platform_label] || 0) + 1; }});
+            new Chart(document.getElementById('platformBarChart'), {{
                 type: 'bar',
-                data: { labels: Object.keys(platMap), datasets: [{ label: '건수', data: Object.values(platMap), backgroundColor: '#f97316' }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
+                data: {{ labels: Object.keys(platMap), datasets: [{{ label: '건수', data: Object.values(platMap), backgroundColor: '#f97316' }}] }},
+                options: {{ responsive: true, maintainAspectRatio: false }}
+            }});
 
             const koCount = dataset.filter(d => d.language_label === "한국어").length;
             const zhCount = dataset.filter(d => d.language_label === "중국어").length;
-            new Chart(document.getElementById('languageBarChart'), {
+            new Chart(document.getElementById('languageBarChart'), {{
                 type: 'bar',
-                data: { 
+                data: {{ 
                     labels: ['한국어', '중국어'], 
-                    datasets: [{ label: '비율(%)', data: [total > 0 ? ((koCount/total)*100).toFixed(1) : 0, total > 0 ? ((zhCount/total)*100).toFixed(1) : 0], backgroundColor: '#14b8a6' }] 
+                    datasets: [{{ label: '비율(%)', data: [total > 0 ? ((koCount/total)*100).toFixed(1) : 0, total > 0 ? ((zhCount/total)*100).toFixed(1) : 0], backgroundColor: '#14b8a6' }}] 
                 },
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100 } } }
-            });
+            }});
 
             const issues = ["배송지연", "통관문제", "정품논란", "오배송", "반품", "기타"];
             const issueCounts = issues.map(iss => dataset.filter(d => d.issue_type === iss).length);
-            new Chart(document.getElementById('issueBarChart'), {
+            new Chart(document.getElementById('issueBarChart'), {{
                 type: 'bar',
-                data: { labels: issues, datasets: [{ label: '건수', data: issueCounts, backgroundColor: '#ef4444' }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
+                data: {{ labels: issues, datasets: [{{ label: '건수', data: issueCounts, backgroundColor: '#ef4444' }}] }},
+                options: {{ responsive: true, maintainAspectRatio: false }}
+            }});
 
             switchTab('긍정');
             runWordCloud(dataset);
         }
 
-        document.getElementById("searchInput").addEventListener("input", function(e) {
+        document.getElementById("searchInput").addEventListener("input", function(e) {{
             const query = e.target.value.trim();
             const tableBody = document.getElementById("searchResultsTable");
-            if(!query) {
+            if(!query) {{
                 tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">검색어를 입력하면 관련 리뷰를 최대 10건까지 확인할 수 있습니다.</td></tr>`;
                 return;
-            }
+            }}
             const regex = new RegExp(query, "i");
             const filtered = globalDataset.filter(d => regex.test(d.review)).slice(0, 10);
-            if(filtered.length === 0) {
+            if(filtered.length === 0) {{
                 tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">검색 결과가 없습니다.</td></tr>`;
                 return;
-            }
+            }}
             tableBody.innerHTML = filtered.map(d => `
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="px-4 py-3 font-medium text-gray-900">${d.product}</td>
-                    <td class="px-4 py-3">${d.rating}점</td>
-                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${d.sentiment==='긍정'?'bg-blue-100 text-blue-700':d.sentiment==='중립'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">${d.sentiment}</span></td>
-                    <td class="px-4 py-3 text-gray-500">${d.review}</td>
+                    <td class="px-4 py-3 font-medium text-gray-900">${{d.product}}</td>
+                    <td class="px-4 py-3">${{d.rating}}점</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${{d.sentiment==='긍정'?'bg-blue-100 text-blue-700':d.sentiment==='중립'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}}">${{d.sentiment}}</span></td>
+                    <td class="px-4 py-3 text-gray-500">${{d.review}}</td>
                 </tr>
             `).join('');
-        });
+        }});
 
-        function switchTab(sentiment) {
+        function switchTab(sentiment) {{
             ['pos', 'neu', 'neg'].forEach(t => document.getElementById('tab-'+t).className = "px-4 py-2 font-medium text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 focus:outline-hidden");
             if(sentiment === '긍정') document.getElementById('tab-pos').className = "px-4 py-2 font-medium text-sm border-b-2 border-purple-600 text-purple-600 focus:outline-hidden";
             if(sentiment === '중립') document.getElementById('tab-neu').className = "px-4 py-2 font-medium text-sm border-b-2 border-purple-600 text-purple-600 focus:outline-hidden";
@@ -256,25 +254,31 @@
             const filtered = globalDataset.filter(d => d.sentiment === sentiment).slice(0, 20);
             tableBody.innerHTML = filtered.map(d => `
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="px-4 py-3 font-medium text-gray-900">${d.product}</td>
-                    <td class="px-4 py-3">${d.platform_label}</td>
-                    <td class="px-4 py-3">${d.language_label}</td>
-                    <td class="px-4 py-3">${d.rating}점</td>
-                    <td class="px-4 py-3 text-gray-500">${d.review}</td>
+                    <td class="px-4 py-3 font-medium text-gray-900">${{d.product}}</td>
+                    <td class="px-4 py-3">${{d.platform_label}}</td>
+                    <td class="px-4 py-3">${{d.language_label}}</td>
+                    <td class="px-4 py-3">${{d.rating}}점</td>
+                    <td class="px-4 py-3 text-gray-500">${{d.review}}</td>
                 </tr>
             `).join('');
         }
 
-        function runWordCloud(dataset) {
+        function runWordCloud(dataset) {{
             const koReviews = dataset.filter(d => d.language_label === "한국어").map(d => d.review).join(" ");
             const keywords = ['촉촉', '발림성', '진정', '재구매', '순함', '흡수력', '배송', '트러블', '가성비', '보습', '화장품', '수분', '효과', '성분'];
-            const list = keywords.map(w => {
+            const list = keywords.map(w => {{
                 const count = (koReviews.match(new RegExp(w, "g")) || []).length;
                 return [w, count > 0 ? count + 5 : 10];
-            }).sort((a,b) => b[1] - a[1]);
+            }}).sort((a,b) => b[1] - a[1]);
 
-            WordCloud(document.getElementById('wordcloud-container'), { list: list, gridSize: 18, weightFactor: 1.5, color: 'random-dark', backgroundColor: '#ffffff' });
+            WordCloud(document.getElementById('wordcloud-container'), {{ list: list, gridSize: 18, weightFactor: 1.5, color: 'random-dark', backgroundColor: '#ffffff' }});
         }
     </script>
 </body>
-</html>
+</html>"""
+
+# 3. 데이터가 심어진 최종 html 파일 내보내기
+with open('index_final.html', 'w', encoding='utf-8') as f:
+    f.write(html_template)
+
+print("작업 완료! 생성된 'index_final.html' 파일의 코드를 복사해 깃허브 index.html에 덮어쓰기 하세요.")
