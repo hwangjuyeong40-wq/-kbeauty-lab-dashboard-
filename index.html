@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Beauty Insight Lab</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+</head>
+<body class="bg-gray-50 font-sans antialiased text-gray-800">
+
+    <header class="bg-white border-b border-gray-200 fixed w-full z-30 top-0 left-0 px-6 py-4">
+        <h1 class="text-2xl font-bold text-gray-900">K-Beauty Insight Lab</h1>
+        <p class="text-sm text-gray-500 mt-1">#### 한국 소비자 리뷰 기반 K-뷰티 데이터 분석 플랫폼</p>
+    </header>
+
+    <main class="max-w-7xl mx-auto pt-28 px-4 pb-12">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+                <p class="text-xs font-medium text-gray-400 uppercase">총 리뷰 수</p>
+                <h3 id="kpi-total" class="text-2xl font-bold text-gray-900 mt-1">로딩 중...</h3>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+                <p class="text-xs font-medium text-blue-500 uppercase">긍정 리뷰 수</p>
+                <h3 id="kpi-pos" class="text-2xl font-bold text-blue-600 mt-1">로딩 중...</h3>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+                <p class="text-xs font-medium text-green-500 uppercase">중립 리뷰 수</p>
+                <h3 id="kpi-neu" class="text-2xl font-bold text-green-600 mt-1">로딩 중...</h3>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+                <p class="text-xs font-medium text-red-500 uppercase">부정 리뷰 수</p>
+                <h3 id="kpi-neg" class="text-2xl font-bold text-red-600 mt-1">로딩 중...</h3>
+            </div>
+        </div>
+
+        <hr class="border-gray-200 my-6">
+
+        <section class="mb-8">
+            <h2 class="text-xl font-bold text-gray-900">데이터 분석</h2>
+            <p class="text-sm text-gray-500 mb-6">수집된 K-뷰티 리뷰 데이터의 핵심 분포를 확인합니다.</p>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+                    <h5 class="font-bold text-gray-700 mb-4">##### 감성 분석</h5>
+                    <div class="relative h-64 flex justify-center"><canvas id="sentimentPieChart"></canvas></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+                    <h5 class="font-bold text-gray-700 mb-4">##### 별점 분석</h5>
+                    <div class="relative h-64"><canvas id="ratingBarChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+                    <h5 class="font-bold text-gray-700 mb-4">##### 제품별 분석 (Top 10)</h5>
+                    <div class="relative h-64"><canvas id="productHBarChart"></canvas></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+                    <h5 class="font-bold text-gray-700 mb-4">##### 플랫폼 분석</h5>
+                    <div class="relative h-64"><canvas id="platformBarChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+                    <h5 class="font-bold text-gray-700 mb-4">##### 언어 분석</h5>
+                    <div class="relative h-64"><canvas id="languageBarChart"></canvas></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
+                    <h5 class="font-bold text-gray-700 mb-4">##### Issue 분석</h5>
+                    <div class="relative h-64"><canvas id="issueBarChart"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-gray-200 my-8">
+
+        <section class="mb-8">
+            <h2 class="text-xl font-bold text-gray-900">리뷰 검색</h2>
+            <p class="text-sm text-gray-500 mb-4">검색 결과는 최대 10건만 표시합니다.</p>
+            <input type="text" id="searchInput" placeholder="촉촉, 발림성, 흡수력, 진정, 순함, 재구매" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-hidden focus:border-purple-500 mb-4">
+            
+            <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-xs">
+                <table class="w-full text-sm text-left text-gray-600">
+                    <thead class="bg-gray-50 text-xs text-gray-500 uppercase border-b border-gray-200">
+                        <tr>
+                            <th class="px-4 py-3">제품명</th>
+                            <th class="px-4 py-3">별점</th>
+                            <th class="px-4 py-3">감성</th>
+                            <th class="px-4 py-3">리뷰 원문</th>
+                        </tr>
+                    </thead>
+                    <tbody id="searchResultsTable">
+                        <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">검색어를 입력하면 관련 리뷰를 최대 10건까지 확인할 수 있습니다.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <hr class="border-gray-200 my-8">
+
+        <section class="mb-8">
+            <h2 class="text-xl font-bold text-gray-900">감성별 원본 데이터 보기</h2>
+            <p class="text-sm text-gray-500 mb-4">각 감성별 리뷰를 최대 20건씩 표시합니다.</p>
+            
+            <div class="flex border-b border-gray-200 mb-4 gap-2">
+                <button onclick="switchTab('긍정')" id="tab-pos" class="px-4 py-2 font-medium text-sm border-b-2 border-purple-600 text-purple-600 focus:outline-hidden">긍정</button>
+                <button onclick="switchTab('중립')" id="tab-neu" class="px-4 py-2 font-medium text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 focus:outline-hidden">중립</button>
+                <button onclick="switchTab('부정')" id="tab-neg" class="px-4 py-2 font-medium text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 focus:outline-hidden">부정</button>
+            </div>
+
+            <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-xs">
+                <table class="w-full text-sm text-left text-gray-600">
+                    <thead class="bg-gray-50 text-xs text-gray-500 uppercase border-b border-gray-200">
+                        <tr>
+                            <th class="px-4 py-3">제품명</th>
+                            <th class="px-4 py-3">플랫폼</th>
+                            <th class="px-4 py-3">언어</th>
+                            <th class="px-4 py-3">별점</th>
+                            <th class="px-4 py-3">리뷰 원문</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sentimentTabTable"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <hr class="border-gray-200 my-8">
+
+        <section class="mb-8">
+            <h2 class="text-xl font-bold text-gray-900">워드클라우드</h2>
+            <p class="text-sm text-gray-500 mb-4">한국어 리뷰(language == 'ko')만 사용합니다.</p>
+            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-xs flex justify-center items-center">
+                <div id="wordcloud-container" style="width: 800px; height: 350px; position: relative;"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let globalDataset = [];
+
+        // 데이터 동적 페치 파이프라인
+        async_load_data();
+
+        async function async_load_data() {
+            try {
+                const response = await fetch('data.json');
+                globalDataset = await response.json();
+                initDashboard(globalDataset);
+            } catch (error) {
+                console.error("데이터 셋 로드 실패:", error);
+                alert("data.json 파일을 불러오지 못했습니다. 경로를 확인해 주세요.");
+            }
+        }
+
+        function initDashboard(dataset) {
+            // KPI 계산
+            const total = dataset.length;
+            const pos = dataset.filter(d => d.sentiment === "긍정").length;
+            const neu = dataset.filter(d => d.sentiment === "중립").length;
+            const neg = dataset.filter(d => d.sentiment === "부정").length;
+
+            document.getElementById("kpi-total").innerText = total.toLocaleString() + "건";
+            document.getElementById("kpi-pos").innerText = pos.toLocaleString() + "건";
+            document.getElementById("kpi-neu").innerText = neu.toLocaleString() + "건";
+            document.getElementById("kpi-neg").innerText = neg.toLocaleString() + "건";
+
+            // 1. 감성 파이차트
+            new Chart(document.getElementById('sentimentPieChart'), {
+                type: 'doughnut',
+                data: { labels: ['긍정', '중립', '부정'], datasets: [{ data: [pos, neu, neg], backgroundColor: ['#2563eb', '#16a34a', '#dc2626'] }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 2. 별점 바차트
+            const ratings = [1,2,3,4,5].map(r => dataset.filter(d => d.rating === r).length);
+            new Chart(document.getElementById('ratingBarChart'), {
+                type: 'bar',
+                data: { labels: ['1점', '2점', '3점', '4점', '5점'], datasets: [{ label: '건수', data: ratings, backgroundColor: '#7c3aed' }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 3. 제품별 Top 10 빈도 계산 연산 엔진
+            const prodMap = {};
+            dataset.forEach(d => { prodMap[d.product] = (prodMap[d.product] || 0) + 1; });
+            const sortedProd = Object.entries(prodMap).sort((a,b) => b[1] - a[1]).slice(0, 10);
+            new Chart(document.getElementById('productHBarChart'), {
+                type: 'bar',
+                data: { labels: sortedProd.map(x => x[0]), datasets: [{ label: '건수', data: sortedProd.map(x => x[1]), backgroundColor: '#0ea5e9' }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+            });
+
+            // 4. 플랫폼 분포 연산
+            const platMap = {};
+            dataset.forEach(d => { platMap[d.platform_label] = (platMap[d.platform_label] || 0) + 1; });
+            new Chart(document.getElementById('platformBarChart'), {
+                type: 'bar',
+                data: { labels: Object.keys(platMap), datasets: [{ label: '건수', data: Object.values(platMap), backgroundColor: '#f97316' }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 5. 언어 비율 계산
+            const koCount = dataset.filter(d => d.language_label === "한국어").length;
+            const zhCount = dataset.filter(d => d.language_label === "중국어").length;
+            new Chart(document.getElementById('languageBarChart'), {
+                type: 'bar',
+                data: { labels: ['한국어', '중국어'], datasets: [{ label: '비율(%)', data: [((koCount/total)*100).round(1) || 0, ((zhCount/total)*100).round(1) || 0], backgroundColor: '#14b8a6' }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 6. 이슈 타입 랭킹 연산
+            const issues = ["배송지연", "통관문제", "정품논란", "오배송", "반품", "기타"];
+            const issueCounts = issues.map(iss => dataset.filter(d => d.issue_type === iss).length);
+            new Chart(document.getElementById('issueBarChart'), {
+                type: 'bar',
+                data: { labels: issues, datasets: [{ label: '건수', data: issueCounts, backgroundColor: '#ef4444' }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 초기 탭 세팅 및 텍스트 마이닝 구동
+            switchTab('긍정');
+            runWordCloud(dataset);
+        }
+
+        // 검색 처리 파이프라인
+        document.getElementById("searchInput").addEventListener("input", function(e) {
+            const query = e.target.value.trim();
+            const tableBody = document.getElementById("searchResultsTable");
+            if(!query) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">검색어를 입력하면 관련 리뷰를 최대 10건까지 확인할 수 있습니다.</td></tr>`;
+                return;
+            }
+            const regex = new RegExp(query, "i");
+            const filtered = globalDataset.filter(d => regex.test(d.review)).slice(0, 10);
+            if(filtered.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">검색 결과가 없습니다.</td></tr>`;
+                return;
+            }
+            tableBody.innerHTML = filtered.map(d => `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium text-gray-900">${d.product}</td>
+                    <td class="px-4 py-3">${d.rating}점</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${d.sentiment==='긍정'?'bg-blue-100 text-blue-700':d.sentiment==='중립'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">${d.sentiment}</span></td>
+                    <td class="px-4 py-3 text-gray-500">${d.review}</td>
+                </tr>
+            `).join('');
+        });
+
+        // 탭 변경
+         Lah
+        function switchTab(sentiment) {
+            ['pos', 'neu', 'neg'].forEach(t => document.getElementById('tab-'+t).className = "px-4 py-2 font-medium text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 focus:outline-hidden");
+            if(sentiment === '긍정') document.getElementById('tab-pos').className = "px-4 py-2 font-medium text-sm border-b-2 border-purple-600 text-purple-600 focus:outline-hidden";
+            if(sentiment === '중립') document.getElementById('tab-neu').className = "px-4 py-2 font-medium text-sm border-b-2 border-purple-600 text-purple-600 focus:outline-hidden";
+            if(sentiment === '부정') document.getElementById('tab-neg').className = "px-4 py-2 font-medium text-sm border-b-2 border-purple-600 text-purple-600 focus:outline-hidden";
+
+            const tableBody = document.getElementById("sentimentTabTable");
+            const filtered = globalDataset.filter(d => d.sentiment === sentiment).slice(0, 20);
+            tableBody.innerHTML = filtered.map(d => `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium text-gray-900">${d.product}</td>
+                    <td class="px-4 py-3">${d.platform_label}</td>
+                    <td class="px-4 py-3">${d.language_label}</td>
+                    <td class="px-4 py-3">${d.rating}점</td>
+                    <td class="px-4 py-3 text-gray-500">${d.review}</td>
+                </tr>
+            `).join('');
+        }
+
+        // 프론트엔드 자연어 워드클라우드 시뮬레이터
+        function runWordCloud(dataset) {
+            const koReviews = dataset.filter(d => d.language_label === "한국어").map(d => d.review).join(" ");
+            // 기초적인 토큰 빈도 추출 연산
+            const keywords = ['촉촉', '발림성', '진정', '재구매', '순함', '흡수력', '배송', '트러블', '가성비', '보습', '화장품', '수분', '효과', '성분'];
+            const list = keywords.map(w => {
+                const count = (koReviews.match(new RegExp(w, "g")) || []).length;
+                return [w, count > 0 ? count + 5 : 10];
+            }).sort((a,b) => b[1] - a[1]);
+
+            WordCloud(document.getElementById('wordcloud-container'), { list: list, gridSize: 18, weightFactor: 1.5, color: 'random-dark', backgroundColor: '#ffffff' });
+        }
+        Number.prototype.round = function(p) { p = p || 10; return Math.round(this*p)/p; };
+    </script>
+</body>
+</html>
