@@ -1,284 +1,35 @@
-import json
+# VS 코드 전용 - 데이터 자동 주입 및 index.html 생성 스크립트 (make_html.py)
+import os
+import urllib.request
 
-# 1. 기존 데이터 로드
-with open('data.json', 'r', encoding='utf-8') as f:
+# 1. 파일 존재 여부 확인 (동일 폴더 기준)
+file_name = 'data.json'
+if not os.path.exists(file_name):
+    raise FileNotFoundError(f"현재 폴더 내에 {file_name} 파일이 존재하지 않습니다. data.json 파일이 스크립트와 같은 폴더에 있는지 확인하십시오.")
+
+with open(file_name, 'r', encoding='utf-8') as f:
     json_data = f.read()
 
-# 2. 통합형 전체 HTML 템플릿 정의
-html_template = f"""<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K-Beauty Insight Lab</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
-</head>
-<body class="bg-gray-50 font-sans antialiased text-gray-800">
+# 2. 깃허브 원본 템플릿 실시간 다운로드
+raw_html_url = "https://raw.githubusercontent.com/hwangjuyeong40-wq/kbeauty-lab-dashboard/main/index.html"
+try:
+    response = urllib.request.urlopen(raw_html_url)
+    base_html = response.read().decode('utf-8')
+except Exception as e:
+    print(f"원격 템플릿 다운로드 실패로 기본 구조 적용: {e}")
+    base_html = """<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>K-Beauty Insight Lab</title><script src="https://cdn.jsdelivr.net/npm/chart.js"></script></head><body><script>const globalDataset = __DATA__;</script></body></html>"""
 
-    <header class="bg-white border-b border-gray-200 fixed w-full z-30 top-0 left-0 px-6 py-4">
-        <h1 class="text-2xl font-bold text-gray-900">K-Beauty Insight Lab</h1>
-        <p class="text-sm text-gray-500 mt-1">#### 한국 소비자 리뷰 기반 K-뷰티 데이터 분석 플랫폼</p>
-    </header>
+# 3. 데이터 치환 주입 작업
+if "const globalDataset = " in base_html:
+    parts = base_html.split("const globalDataset = ")
+    sub_parts = parts[1].split(";", 1)
+    final_html = parts[0] + "const globalDataset = " + json_data + ";" + sub_parts[1]
+else:
+    final_html = base_html.replace("__DATA__", json_data)
 
-    <main class="max-w-7xl mx-auto pt-28 px-4 pb-12">
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                <p class="text-xs font-medium text-gray-400 uppercase">총 리뷰 수</p>
-                <h3 id="kpi-total" class="text-2xl font-bold text-gray-900 mt-1">계산 중...</h3>
-            </div>
-            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                <p class="text-xs font-medium text-blue-500 uppercase">긍정 리뷰 수</p>
-                <h3 id="kpi-pos" class="text-2xl font-bold text-blue-600 mt-1">계산 중...</h3>
-            </div>
-            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                <p class="text-xs font-medium text-green-500 uppercase">중립 리뷰 수</p>
-                <h3 id="kpi-neu" class="text-2xl font-bold text-green-600 mt-1">계산 중...</h3>
-            </div>
-            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                <p class="text-xs font-medium text-red-500 uppercase">부정 리뷰 수</p>
-                <h3 id="kpi-neg" class="text-2xl font-bold text-red-600 mt-1">계산 중...</h3>
-            </div>
-        </div>
+# 4. 결과 파일을 index.html 이라는 이름으로 로컬에 바로 저장 (파일명 불일치 문제 해결)
+output_name = 'index.html'
+with open(output_name, 'w', encoding='utf-8') as f:
+    f.write(final_html)
 
-        <hr class="border-gray-200 my-6">
-
-        <section class="mb-8">
-            <h2 class="text-xl font-bold text-gray-900">데이터 분석</h2>
-            <p class="text-sm text-gray-500 mb-6">수집된 K-뷰티 리뷰 데이터의 핵심 분포를 확인합니다.</p>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                    <h5 class="font-bold text-gray-700 mb-4">##### 감성 분석</h5>
-                    <div class="relative h-64 flex justify-center"><canvas id="sentimentPieChart"></canvas></div>
-                </div>
-                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                    <h5 class="font-bold text-gray-700 mb-4">##### 별점 분석</h5>
-                    <div class="relative h-64"><canvas id="ratingBarChart"></canvas></div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                    <h5 class="font-bold text-gray-700 mb-4">##### 제품별 분석 (Top 10)</h5>
-                    <div class="relative h-64"><canvas id="productHBarChart"></canvas></div>
-                </div>
-                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                    <h5 class="font-bold text-gray-700 mb-4">##### 플랫폼 분석</h5>
-                    <div class="relative h-64"><canvas id="platformBarChart"></canvas></div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                    <h5 class="font-bold text-gray-700 mb-4">##### 언어 분석</h5>
-                    <div class="relative h-64"><canvas id="languageBarChart"></canvas></div>
-                </div>
-                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                    <h5 class="font-bold text-gray-700 mb-4">##### Issue 분석</h5>
-                    <div class="relative h-64"><canvas id="issueBarChart"></canvas></div>
-                </div>
-            </div>
-        </section>
-
-        <hr class="border-gray-200 my-8">
-
-        <section class="mb-8">
-            <h2 class="text-xl font-bold text-gray-900">리뷰 검색</h2>
-            <p class="text-sm text-gray-500 mb-4">검색 결과는 최대 10건만 표시합니다.</p>
-            <input type="text" id="searchInput" placeholder="촉촉, 발림성, 흡수력, 진정, 순함, 재구매" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-hidden focus:border-purple-500 mb-4">
-            
-            <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-xs">
-                <table class="w-full text-sm text-left text-gray-600">
-                    <thead class="bg-gray-50 text-xs text-gray-500 uppercase border-b border-gray-200">
-                        <tr>
-                            <th class="px-4 py-3">제품명</th>
-                            <th class="px-4 py-3">별점</th>
-                            <th class="px-4 py-3">감성</th>
-                            <th class="px-4 py-3">리뷰 원문</th>
-                        </tr>
-                    </thead>
-                    <tbody id="searchResultsTable">
-                        <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">검색어를 입력하면 관련 리뷰를 최대 10건까지 확인할 수 있습니다.</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <hr class="border-gray-200 my-8">
-
-        <section class="mb-8">
-            <h2 class="text-xl font-bold text-gray-900">감성별 원본 데이터 보기</h2>
-            <p class="text-sm text-gray-500 mb-4">각 감성별 리뷰를 최대 20건씩 표시합니다.</p>
-            
-            <div class="flex border-b border-gray-200 mb-4 gap-2">
-                <button onclick="switchTab('긍정')" id="tab-pos" class="px-4 py-2 font-medium text-sm border-b-2 border-purple-600 text-purple-600 focus:outline-hidden">긍정</button>
-                <button onclick="switchTab('중립')" id="tab-neu" class="px-4 py-2 font-medium text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 focus:outline-hidden">중립</button>
-                <button onclick="switchTab('부정')" id="tab-neg" class="px-4 py-2 font-medium text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 focus:outline-hidden">부정</button>
-            </div>
-
-            <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-xs">
-                <table class="w-full text-sm text-left text-gray-600">
-                    <thead class="bg-gray-50 text-xs text-gray-500 uppercase border-b border-gray-200">
-                        <tr>
-                            <th class="px-4 py-3">제품명</th>
-                            <th class="px-4 py-3">플랫폼</th>
-                            <th class="px-4 py-3">언어</th>
-                            <th class="px-4 py-3">별점</th>
-                            <th class="px-4 py-3">리뷰 원문</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sentimentTabTable"></tbody>
-                </table>
-            </div>
-        </section>
-
-        <hr class="border-gray-200 my-8">
-
-        <section class="mb-8">
-            <h2 class="text-xl font-bold text-gray-900">워드클라우드</h2>
-            <p class="text-sm text-gray-500 mb-4">한국어 리뷰(language == 'ko')만 사용합니다.</p>
-            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-xs flex justify-center items-center">
-                <div id="wordcloud-container" style="width: 800px; height: 350px; position: relative;"></div>
-            </div>
-        </section>
-
-    </main>
-
-    <script>
-        const globalDataset = {json_data};
-
-        if (globalDataset.length > 0) {{
-            initDashboard(globalDataset);
-        }} else {{
-            alert("globalDataset 변수 안에 데이터가 주입되지 않았습니다.");
-        }}
-
-        function initDashboard(dataset) {{
-            const total = dataset.length;
-            const pos = dataset.filter(d => d.sentiment === "긍정").length;
-            const neu = dataset.filter(d => d.sentiment === "중립").length;
-            const neg = dataset.filter(d => d.sentiment === "부정").length;
-
-            document.getElementById("kpi-total").innerText = total.toLocaleString() + "건";
-            document.getElementById("kpi-pos").innerText = pos.toLocaleString() + "건";
-            document.getElementById("kpi-neu").innerText = neu.toLocaleString() + "건";
-            document.getElementById("kpi-neg").innerText = neg.toLocaleString() + "건";
-
-            new Chart(document.getElementById('sentimentPieChart'), {{
-                type: 'doughnut',
-                data: {{ labels: ['긍정', '중립', '부정'], datasets: [{{ data: [pos, neu, neg], backgroundColor: ['#2563eb', '#16a34a', '#dc2626'] }}] }},
-                options: {{ responsive: true, maintainAspectRatio: false }}
-            }});
-
-            const ratings = [1,2,3,4,5].map(r => dataset.filter(d => d.rating === r).length);
-            new Chart(document.getElementById('ratingBarChart'), {{
-                type: 'bar',
-                data: {{ labels: ['1점', '2점', '3점', '4점', '5점'], datasets: [{{ label: '건수', data: ratings, backgroundColor: '#7c3aed' }}] }},
-                options: {{ responsive: true, maintainAspectRatio: false }}
-            }});
-
-            const prodMap = {{}};
-            dataset.forEach(d => {{ prodMap[d.product] = (prodMap[d.product] || 0) + 1; }});
-            const sortedProd = Object.entries(prodMap).sort((a,b) => b[1] - a[1]).slice(0, 10);
-            new Chart(document.getElementById('productHBarChart'), {{
-                type: 'bar',
-                data: {{ labels: sortedProd.map(x => x[0]), datasets: [{{ label: '건수', data: sortedProd.map(x => x[1]), backgroundColor: '#0ea5e9' }}] }},
-                options: {{ indexAxis: 'y', responsive: true, maintainAspectRatio: false }}
-            }});
-
-            const platMap = {{}};
-            dataset.forEach(d => {{ platMap[d.platform_label] = (platMap[d.platform_label] || 0) + 1; }});
-            new Chart(document.getElementById('platformBarChart'), {{
-                type: 'bar',
-                data: {{ labels: Object.keys(platMap), datasets: [{{ label: '건수', data: Object.values(platMap), backgroundColor: '#f97316' }}] }},
-                options: {{ responsive: true, maintainAspectRatio: false }}
-            }});
-
-            const koCount = dataset.filter(d => d.language_label === "한국어").length;
-            const zhCount = dataset.filter(d => d.language_label === "중국어").length;
-            new Chart(document.getElementById('languageBarChart'), {{
-                type: 'bar',
-                data: {{ 
-                    labels: ['한국어', '중국어'], 
-                    datasets: [{{ label: '비율(%)', data: [total > 0 ? ((koCount/total)*100).toFixed(1) : 0, total > 0 ? ((zhCount/total)*100).toFixed(1) : 0], backgroundColor: '#14b8a6' }}] 
-                },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100 } } }
-            }});
-
-            const issues = ["배송지연", "통관문제", "정품논란", "오배송", "반품", "기타"];
-            const issueCounts = issues.map(iss => dataset.filter(d => d.issue_type === iss).length);
-            new Chart(document.getElementById('issueBarChart'), {{
-                type: 'bar',
-                data: {{ labels: issues, datasets: [{{ label: '건수', data: issueCounts, backgroundColor: '#ef4444' }}] }},
-                options: {{ responsive: true, maintainAspectRatio: false }}
-            }});
-
-            switchTab('긍정');
-            runWordCloud(dataset);
-        }
-
-        document.getElementById("searchInput").addEventListener("input", function(e) {{
-            const query = e.target.value.trim();
-            const tableBody = document.getElementById("searchResultsTable");
-            if(!query) {{
-                tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">검색어를 입력하면 관련 리뷰를 최대 10건까지 확인할 수 있습니다.</td></tr>`;
-                return;
-            }}
-            const regex = new RegExp(query, "i");
-            const filtered = globalDataset.filter(d => regex.test(d.review)).slice(0, 10);
-            if(filtered.length === 0) {{
-                tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">검색 결과가 없습니다.</td></tr>`;
-                return;
-            }}
-            tableBody.innerHTML = filtered.map(d => `
-                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="px-4 py-3 font-medium text-gray-900">${{d.product}}</td>
-                    <td class="px-4 py-3">${{d.rating}}점</td>
-                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${{d.sentiment==='긍정'?'bg-blue-100 text-blue-700':d.sentiment==='중립'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}}">${{d.sentiment}}</span></td>
-                    <td class="px-4 py-3 text-gray-500">${{d.review}}</td>
-                </tr>
-            `).join('');
-        }});
-
-        function switchTab(sentiment) {{
-            ['pos', 'neu', 'neg'].forEach(t => document.getElementById('tab-'+t).className = "px-4 py-2 font-medium text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 focus:outline-hidden");
-            if(sentiment === '긍정') document.getElementById('tab-pos').className = "px-4 py-2 font-medium text-sm border-b-2 border-purple-600 text-purple-600 focus:outline-hidden";
-            if(sentiment === '중립') document.getElementById('tab-neu').className = "px-4 py-2 font-medium text-sm border-b-2 border-purple-600 text-purple-600 focus:outline-hidden";
-            if(sentiment === '부정') document.getElementById('tab-neg').className = "px-4 py-2 font-medium text-sm border-b-2 border-purple-600 text-purple-600 focus:outline-hidden";
-
-            const tableBody = document.getElementById("sentimentTabTable");
-            const filtered = globalDataset.filter(d => d.sentiment === sentiment).slice(0, 20);
-            tableBody.innerHTML = filtered.map(d => `
-                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="px-4 py-3 font-medium text-gray-900">${{d.product}}</td>
-                    <td class="px-4 py-3">${{d.platform_label}}</td>
-                    <td class="px-4 py-3">${{d.language_label}}</td>
-                    <td class="px-4 py-3">${{d.rating}}점</td>
-                    <td class="px-4 py-3 text-gray-500">${{d.review}}</td>
-                </tr>
-            `).join('');
-        }
-
-        function runWordCloud(dataset) {{
-            const koReviews = dataset.filter(d => d.language_label === "한국어").map(d => d.review).join(" ");
-            const keywords = ['촉촉', '발림성', '진정', '재구매', '순함', '흡수력', '배송', '트러블', '가성비', '보습', '화장품', '수분', '효과', '성분'];
-            const list = keywords.map(w => {{
-                const count = (koReviews.match(new RegExp(w, "g")) || []).length;
-                return [w, count > 0 ? count + 5 : 10];
-            }}).sort((a,b) => b[1] - a[1]);
-
-            WordCloud(document.getElementById('wordcloud-container'), {{ list: list, gridSize: 18, weightFactor: 1.5, color: 'random-dark', backgroundColor: '#ffffff' }});
-        }
-    </script>
-</body>
-</html>"""
-
-# 3. 데이터가 심어진 최종 html 파일 내보내기
-with open('index_final.html', 'w', encoding='utf-8') as f:
-    f.write(html_template)
-
-print("작업 완료! 생성된 'index_final.html' 파일의 코드를 복사해 깃허브 index.html에 덮어쓰기 하세요.")
+print(f"작업 완료! 동일 폴더 내에 데이터가 주입된 '{output_name}' 파일이 성공적으로 덮어씌워졌거나 생성되었습니다.")
