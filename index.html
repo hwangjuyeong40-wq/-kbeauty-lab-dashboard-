@@ -5,7 +5,6 @@
     <title>K-Beauty Insight Lab</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js"></script>
 </head>
 <body class="bg-gray-100 p-6">
     <div class="max-w-6xl mx-auto">
@@ -20,12 +19,6 @@
                 </select>
             </div>
         </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white p-4 rounded shadow"><canvas id="sentimentChart"></canvas></div>
-            <div class="bg-white p-4 rounded shadow h-64" id="wordCloud"></div>
-        </div>
-
         <div class="bg-white p-4 rounded shadow overflow-x-auto">
             <table class="w-full text-left">
                 <thead><tr class="border-b"><th class="p-2">제품</th><th class="p-2">리뷰</th><th class="p-2">감성</th></tr></thead>
@@ -33,38 +26,32 @@
             </table>
         </div>
     </div>
-
     <script>
-        // data.json.py에서 생성된 데이터를 여기에 복사하세요. 예시 데이터입니다.
-        const dataset = [
-            { product: "세럼A", review: "촉촉하고 좋아요", sentiment: "긍정", platform_label: "네이버 쇼핑" },
-            { product: "크림B", review: "배송이 느려요", sentiment: "부정", platform_label: "화해" }
-        ];
+        // 데이터가 없으면 빈 배열로 시작
+        let dataset = [];
+
+        async function init() {
+            try {
+                const response = await fetch('data.json');
+                dataset = await response.json();
+                render();
+            } catch(e) { console.log("data.json 파일이 깃허브에 없습니다."); }
+        }
 
         function render() {
             const query = document.getElementById('searchInput').value.toLowerCase();
             const platform = document.getElementById('platformFilter').value;
-            
             const filtered = dataset.filter(d => 
                 (platform === '전체' || d.platform_label === platform) &&
                 (d.product.toLowerCase().includes(query) || d.review.includes(query))
             );
-
-            // 테이블 렌더링
             document.getElementById('tableBody').innerHTML = filtered.map(d => `
-                <tr class="border-b">
-                    <td class="p-2">${d.product}</td>
-                    <td class="p-2">${d.review}</td>
-                    <td class="p-2">${d.sentiment}</td>
-                </tr>
+                <tr class="border-b"><td class="p-2">${d.product}</td><td class="p-2">${d.review}</td><td class="p-2">${d.sentiment}</td></tr>
             `).join('');
-
-            // 차트 로직 추가 필요 시 여기에 작성
         }
-
         document.getElementById('searchInput').addEventListener('input', render);
         document.getElementById('platformFilter').addEventListener('change', render);
-        render();
+        init();
     </script>
 </body>
 </html>
