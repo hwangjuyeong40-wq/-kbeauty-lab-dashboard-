@@ -1,44 +1,32 @@
 import pandas as pd
 import json
-import os
-import glob
 
-def build_v1():
-    # 현재 폴더에서 .xlsx 또는 .csv 파일을 찾습니다.
-    files = glob.glob("*.xlsx") + glob.glob("*.csv")
-    
-    if not files:
-        print("오류: 데이터 파일을 찾을 수 없습니다. 폴더를 확인하세요.")
-        return
+# 1. 엑셀 데이터 로드
+df = pd.read_excel("final_multilingual_dataset_726.xlsx")
+df.columns = [str(col).strip() for col in df.columns]
 
-    # 첫 번째 파일을 타겟으로 설정
-    target_file = files[0]
-    print(f"파일 발견: {target_file}를 처리합니다.")
+# 2. 파이썬 코드에 있던 전처리 로직 그대로 적용
+sentiment_map = {
+    "positive": "긍정", "neutral": "중립", "negative": "부정",
+    "긍정": "긍정", "중립": "중립", "부정": "부정"
+}
+df["sentiment"] = df["sentiment"].astype(str).str.strip().map(sentiment_map).fillna("중립")
+df["platform"] = df["platform"].astype(str).str.strip()
+df["language"] = df["language"].astype(str).str.strip()
+df["product"] = df["product"].fillna("제품명 없음").astype(str).str.strip()
+df["review"] = df["review"].fillna("").astype(str)
+df["issue_type"] = df["issue_type"].fillna("기타").astype(str).str.strip()
+df["rating"] = pd.to_numeric(df["rating"], errors="coerce").fillna(0).astype(int)
 
-    try:
-        # 확장자에 따라 읽기 방식 결정
-        if target_file.endswith('.xlsx'):
-            df = pd.read_excel(target_file)
-        else:
-            # CSV일 경우 인코딩 자동 시도
-            try:
-                df = pd.read_csv(target_file, encoding='utf-8-sig')
-            except:
-                df = pd.read_csv(target_file, encoding='cp949')
+PLATFORM_LABELS = {"kbeauty_platform": "네이버 쇼핑", "hwahae": "화해", "xiaohongshu": "샤오홍슈"}
+LANGUAGE_LABELS = {"ko": "한국어", "zh": "중국어"}
+df["platform_label"] = df["platform"].map(PLATFORM_LABELS).fillna(df["platform"])
+df["language_label"] = df["language"].map(LANGUAGE_LABELS).fillna(df["language"])
 
-        # 컬럼 공백 제거 및 전처리
-        df.columns = [str(col).strip() for col in df.columns]
-        
-        # 필수 컬럼 전처리
-        df["sentiment"] = df["sentiment"].astype(str).str.strip()
-        df["rating"] = pd.to_numeric(df["rating"], errors="coerce").fillna(0).astype(int)
+# 3. 깃허브 대시보드가 읽을 수 있도록 JSON 파일로 추출
+data_list = df[["product", "platform_label", "language_label", "rating", "sentiment", "review", "issue_type"]].to_dict(orient="records")
 
-        # JSON 저장
-        df.to_json('data.json', orient='records', force_ascii=False, indent=4)
-        print(f"성공: {len(df)}건의 데이터를 'data.json'으로 생성했습니다.")
+with open("data.json", "w", encoding="utf-8") as f:
+    json.dump(data_list, f, ensure_ascii=False, indent=4)
 
-    except Exception as e:
-        print(f"변환 오류 발생: {e}")
-
-if __name__ == "__main__":
-    build_v1()
+print("data.json 파일 생성 완료!")
